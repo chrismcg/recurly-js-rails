@@ -4,8 +4,8 @@ require File.expand_path('../lib/recurly-js-rails/version', __FILE__)
 Gem::Specification.new do |gem|
   gem.authors       = ["Chris McGrath"]
   gem.email         = ["chris@octopod.info"]
-  gem.description   = %q{TODO: Write a gem description}
-  gem.summary       = %q{TODO: Write a gem summary}
+  gem.description   = %q{Rails 3.1+ asset gem for recurly-js}
+  gem.summary       = %q{Rails 3.1+ asset gem for recurly-js}
   gem.homepage      = ""
 
   gem.executables   = `git ls-files -- bin/*`.split("\n").map{ |f| File.basename(f) }

@@ -1,9 +1,8 @@
-require "recurly-js-rails/version"
-
 module Recurly
   module Js
     module Rails
-      # Your code goes here...
+      require "recurly-js-rails/engine"
+      require "recurly-js-rails/version"
     end
   end
 end
