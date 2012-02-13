@@ -13,5 +13,5 @@ Gem::Specification.new do |gem|
   gem.test_files    = `git ls-files -- {test,spec,features}/*`.split("\n")
   gem.name          = "recurly-js-rails"
   gem.require_paths = ["lib"]
-  gem.version       = Recurly::Js::Rails::VERSION
+  gem.version       = RecurlyJs::Rails::VERSION
 end
