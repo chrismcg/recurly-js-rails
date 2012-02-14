@@ -1,6 +1,6 @@
-# Recurly::Js::Rails
+# RecurlyJs::Rails
 
-TODO: Write a gem description
+Early alpha version of a Rails 3.1+ asset gem for recurly-js
 
 ## Installation
 
@@ -18,7 +18,15 @@ Or install it yourself as:
 
 ## Usage
 
-TODO: Write usage instructions here
+To include the js and css everywhere add:
+
+`//= recurly` to both your application.js and application.css
+
+To just include on your subscription pages, add:
+
+`config.assets.precompile += %w{recurly.css recurly.js}`
+
+To your application.rb and use `stylesheet_link_tag "recurly"` and `javascript_include_tag "recurly"` where appropriate
 
 ## Contributing
 
