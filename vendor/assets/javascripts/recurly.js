@@ -1,25 +1,25 @@
-//   Recurly.js - v2.0.1
+//   Recurly.js - v2.1.3
 //
-//   Communicates with Recurly <https://recurly.com> via a JSONP API, 
+//   Communicates with Recurly <https://recurly.com> via a JSONP API,
 //   generates UI, handles user error, and passes control to the client
 //   to handle the successful events such as subscription creation.
 //
-//   Author: Emery Denuccio <emery@recurly.com>
+//   Example Site: https://js.recurly.com
 //
 //   (MIT License)
 //
-//   Copyright (C) 2011 by Recurly, Inc. 
-// 
+//   Copyright (C) 2012 by Recurly, Inc.
+//
 //   Permission is hereby granted, free of charge, to any person obtaining a copy
 //   of this software and associated documentation files (the "Software"), to deal
 //   in the Software without restriction, including without limitation the rights
 //   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 //   copies of the Software, and to permit persons to whom the Software is
 //   furnished to do so, subject to the following conditions:
-// 
+//
 //   The above copyright notice and this permission notice shall be included in
 //   all copies or substantial portions of the Software.
-// 
+//
 //   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 //   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 //   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -50,7 +50,7 @@ R.settings = {
 , oneErrorPerField: true
 };
 
-R.version = '2.0.1';
+R.version = '2.1.3';
 
 R.dom = {};
 
@@ -315,22 +315,10 @@ R.knownCards = {
     prefixes: [2014, 2149]
   , name: 'EnRoute'
   }
-, 'solo': {
-    prefixes: [6334, 6767]
-  , name: 'Solo'
-  }
-, 'switch': {
-    prefixes: [4903, 4905, 4911, 4936, 564182, 633110, 6333, 6759]
-  , name: 'Switch'
-  }
 , 'maestro': {
     prefixes: [5018, 5020, 5038, 6304, 6759, 6761]
   , name: 'Maestro'
   }
-, 'visa_electron': {
-    prefixes: [417500, 4917, 4913, 4508, 4844]
-  , name: 'Visa Electron'
-  } // visa electron
 , 'laser': {
     prefixes: [6304, 6706, 6771, 6709]
   , name: 'Laser'
@@ -354,7 +342,7 @@ R.detectCardType = function(cardNumber) {
       }
     }
   }
-  
+
   return false;
 };
 
@@ -383,7 +371,7 @@ R.formatCurrency = function(num,denomination) {
   // Replace default period with format separator
   if(langspec.separator != '.') {
     str = str.replace(/\./g, langspec.separator);
-  } 
+  }
 
   function insertDelimiters(str) {
     var sRegExp = new RegExp('(-?[0-9]+)([0-9]{3})');
@@ -394,7 +382,7 @@ R.formatCurrency = function(num,denomination) {
   }
 
   // Apply thousands delimiter
-  str = insertDelimiters(str); 
+  str = insertDelimiters(str);
 
   // Format unit/number order
   var format = langspec.format;
@@ -456,10 +444,13 @@ R.flattenErrors = function(obj, attr) {
   if(  typeof obj == 'string'
     || typeof obj == 'number'
     || typeof obj == 'boolean') {
-    
+
+    /*
+     * erroneous code, commented out here in case similar logic is needed later
     if($.inArray(baseErrorKeys, attr)) {
       return [obj];
     }
+     */
 
     return ['' + attr + ' ' + obj];
   }
@@ -469,7 +460,7 @@ R.flattenErrors = function(obj, attr) {
     if(obj.hasOwnProperty(k)) {
       // Inherit parent attribute names when property key
       // is a numeric string; how we deal with arrays
-      attr = (parseInt(k).toString() == k) ? attr : k; 
+      attr = (parseInt(k).toString() == k) ? attr : k;
       var children = R.flattenErrors(obj[k], attr);
       for(var i=0, l=children.length; i < l; ++i) {
         arr.push(children[i]);
@@ -480,50 +471,28 @@ R.flattenErrors = function(obj, attr) {
   return arr;
 };
 
+// Very small function, but defining for D.R.Y.ness
+R.getToken = function(response) {
+  var token = response.token || 'INVALIDTOKEN';
+  return token;
+}
 
-R.replaceVars = function(str, vars) {
-  for(var k in vars) {
-    if(vars.hasOwnProperty(k)) {
-      var v = encodeURIComponent(vars[k]);
-      str = str.replace(new RegExp('\\{'+k+'\\}', 'g'), v);
-    }
-  }
-
-  return str;
-};
-
-R.post = function(url, params, options) {
-
-  var resultNamespace = options.resultNamespace || 'recurly_result';
-
-  var newParams = {};
-  newParams[resultNamespace] = params;
-  params = newParams;
+// POST the results from Recurly to the merchant's webserver
+R.postResult = function(url, originalResponse, options) {
+  var token = R.getToken(originalResponse);
 
   var form = $('<form />').hide();
   form.attr('action', url)
       .attr('method', 'POST')
       .attr('enctype', 'application/x-www-form-urlencoded');
 
-  function addParam(name, value, parent) {
-    var fullname = (parent.length > 0 ? (parent + '[' + name + ']') : name);
-    if(typeof value === 'object') {
-      for(var i in value) {
-        if(value.hasOwnProperty(i)) {
-          addParam(i, value[i], fullname);
-        }
-      }
-    }
-    else $('<input type="hidden" />').attr({name: fullname, value: value}).appendTo(form);
-  };
-
-  addParam('', params, '');
+  $('<input type="hidden" />').attr({name: 'recurly_token', value: token}).appendTo(form);
 
   $('body').append(form);
   form.submit();
 };
 
-function jsonToSelect(obj) { 
+function jsonToSelect(obj) {
   var $select = $('<select>');
 
   for(var k in obj) {
@@ -551,7 +520,7 @@ R.enforce = function(obj) {
 function cc2lcu(obj) {
   obj = obj || this;
 
-  if(typeof obj == 'string') { 
+  if(typeof obj == 'string') {
     return obj.replace(/([a-z])([A-Z])/g, function (a, l, u) {
         return l+'_'+u;
     }).toLowerCase();
@@ -559,7 +528,7 @@ function cc2lcu(obj) {
   else {
     for(var k in obj) {
       if(obj.hasOwnProperty(k)) {
-        
+
       }
     }
   }
@@ -575,8 +544,6 @@ R.ajax = function(options) {
 function errorDialog(message) {
   $('body').append(R.dom.error_dialog);
 }
-
-// R.extractEnforcedKey
 
 
 //////////////////////////////////////////////////
@@ -632,6 +599,14 @@ function wholeNumber(val) {
   }
   return !!v;
 }).defaultErrorKey = 'emptyField';
+// State is required if its a dropdown, it is not required if it is an input box
+(R.isNotEmptyState = function($input) {
+  var v = $input.val();
+  if($input.is('select')) {
+    if(v == '-' || v == '--') return false;
+  }
+  return true;
+}).defaultErrorKey = 'emptyField';
 
 (R.isChecked = function($input) {
   return $input.is(':checked');
@@ -654,6 +629,7 @@ R.Plan = {
 
     p.name = json.name;
     p.code = json.plan_code;
+    p.currency = json.currency;
     p.cost = new R.Cost(json.unit_amount_in_cents);
 
     p.displayQuantity = json.display_quantity;
@@ -674,6 +650,14 @@ R.Plan = {
       p.setupFee = new R.Cost(json.setup_fee_in_cents);
     }
 
+    if (json.vat_percentage) {
+      R.settings.VATPercent = parseFloat(json.vat_percentage);
+    }
+
+    if (json.merchant_country) {
+      R.settings.country = json.merchant_country;
+    }
+
     p.addOns = [];
     if(json.add_ons) {
       for(var l=json.add_ons.length, i=0; i < l; ++i) {
@@ -684,9 +668,9 @@ R.Plan = {
 
     return p;
   }
-, get: function(plan_code, callback) {
+, get: function(plan_code, currency, callback) {
     $.ajax({
-      url: R.settings.baseURL+'plans/'+plan_code,
+      url: R.settings.baseURL+'plans/'+plan_code+"?currency="+currency,
       // data: params,
       dataType: "jsonp",
       jsonp: "callback",
@@ -705,7 +689,6 @@ R.Plan = {
     return s;
   }
 };
-
 
 R.AddOn = {
   fromJSON: function(json) {
@@ -897,6 +880,7 @@ R.Subscription = {
     var json = {
       plan_code: this.plan.code
     , quantity: this.plan.quantity
+    , currency: this.plan.currency
     , coupon_code: this.coupon ? this.coupon.code : undefined
     , add_ons: []
     };
@@ -986,8 +970,10 @@ R.Subscription.getCoupon = function(couponCode, successCallback, errorCallback) 
 
   if(!R.settings.baseURL) { R.raiseError('Company subdomain not configured'); }
 
+  var couponCurrencyQuery = (R.settings.currency !== undefined ? '?currency='+R.settings.currency : '');
+
   return R.ajax({
-    url: R.settings.baseURL+'plans/'+this.plan.code+'/coupons/'+couponCode,
+    url: R.settings.baseURL+'plans/'+this.plan.code+'/coupons/'+couponCode+couponCurrencyQuery,
     // data: params,
     dataType: "jsonp",
     jsonp: "callback",
@@ -1016,19 +1002,11 @@ R.Subscription.getCoupon = function(couponCode, successCallback, errorCallback) 
 
 
 R.Transaction = {
-  toJSON: function() {    
-    return {
-      currency: this.currency
-    , amount_in_cents: this.cost.cents()
-    , description: this.description
-    , accounting_code: this.accountingCode
-    };
-  }
-, create: createObject
+ // Note - No toJSON function for this object, all parameters must be signed.
+ create: createObject
 , save: function(options) { 
     var json = {
-      transaction: this.toJSON() 
-    , account: this.account ? this.account.toJSON() : undefined 
+      account: this.account ? this.account.toJSON() : undefined 
     , billing_info: this.billingInfo.toJSON() 
     , signature: options.signature
     };
@@ -1074,31 +1052,23 @@ function raiseUserError(validation, elem) {
 }
 
 function invalidMode(e) { 
+  var $input = e.element;
+  var message = R.locale.errors[e.validation.errorKey];
+  var validator = e.validation.validator;
 
-  // for(var i=0,l=errors.length; i < l; ++i) {
-    // var e = errors[i];
+  var $e = $('<div class="error">');
+  $e.text(message);
+  $e.appendTo($input.parent());
 
-    var $input = e.element;
-    var message = R.locale.errors[e.validation.errorKey];
-    var validator = e.validation.validator;
+  $input.addClass('invalid');
+  $input.bind('change keyup', function handler(e) { 
 
-    var $e = $('<div class="error">');
-    $e.text(message);
-    $e.appendTo($input.parent());
-    // $e.insertAfter($input);
-
-    $input.addClass('invalid');
-    $input.bind('change keyup', function handler(e) { 
-
-      if(validator($input)) {
-        $input.removeClass('invalid');
-        $e.remove();
-        $input.unbind(e);
-      }
-    });
-    // $input.focus();
-  // }
-
+    if(validator($input)) {
+      $input.removeClass('invalid');
+      $e.remove();
+      $input.unbind(e);
+    }
+  });
 }
 
 function validationGroup(pull,success) {
@@ -1217,8 +1187,11 @@ var preFillMap = {
   , zip:            '.billing_info > .address > .state_zip > .zip > input'
   , vatNumber:      '.billing_info > .vat_number > input'
 
-  , cardNumber:      '.billing_info  .card_number > input'
+  , cardNumber:     '.billing_info  .card_number > input'
   , CVV:      '.billing_info  .cvv > input'
+  }
+, subscription: {
+    couponCode:     '.subscription > .coupon > .coupon_code > input'
   }
 };
 
@@ -1242,11 +1215,6 @@ function preFillValues($form, options, mapObject) {
 
           var $input = $form.find(selectorOrNested);
           $input.val(v).change();
-          
-          // Disable if optionally signed param
-          if(options.signature.match('\\+'+keypath2+'[+$]')) {
-            $input.attr('disabled',true).addClass('signed');
-          }
         }
         // nested mapping
         else if(typeof selectorOrNested == 'object') {
@@ -1295,15 +1263,12 @@ function initCommonForm($form, options) {
     $(this).parent().removeClass('focus');
   });
 
-  // Touch of perfection
   $form.delegate('input', 'keydown', function(e) {
     if(e.keyCode >= 48 && e.keyCode <= 90) {
       $(this).parent().find('.placeholder').hide();
     }
   });
   
-  // console.log( parseSignature(options.signature) );
-
   preFillValues($form, options, preFillMap);
 }
 
@@ -1351,8 +1316,8 @@ function initBillingInfoForm($form, options) {
   function matchKnownStateWithInput(country, stateStr) {
     var ref = knownStates[country];
     // Normalize stateStr
-    stateStr = stateStr.toUpperCase().trim();
- 
+    stateStr = $.trim(stateStr.toUpperCase());
+
     // Is a state code
     if(ref.hasOwnProperty(stateStr)) {
       return stateStr;
@@ -1568,13 +1533,20 @@ function pullBillingInfoFields($form, billingInfo, options, pull) {
   billingInfo.month = pull.field($form, '.month');
   billingInfo.year = pull.field($form, '.year');
 
-  billingInfo.phone = pull.field($form, '.phone'); 
-  billingInfo.address1 = pull.field($form, '.address1', V(R.isNotEmpty)); 
-  billingInfo.address2 = pull.field($form, '.address2'); 
-  billingInfo.city = pull.field($form, '.city', V(R.isNotEmpty)); 
-  billingInfo.state = pull.field($form, '.state', V(R.isNotEmpty)); 
-  billingInfo.zip = pull.field($form, '.zip', V(R.isNotEmpty)); 
-  billingInfo.country = pull.field($form, '.country', V(R.isNotEmpty)); 
+  billingInfo.phone = pull.field($form, '.phone');
+  billingInfo.address1 = pull.field($form, '.address1', V(R.isNotEmpty));
+  billingInfo.address2 = pull.field($form, '.address2');
+  billingInfo.city = pull.field($form, '.city', V(R.isNotEmpty));
+  billingInfo.state = pull.field($form, '.state', V(R.isNotEmptyState));
+  billingInfo.zip = pull.field($form, '.zip', V(R.isNotEmpty));
+  billingInfo.country = pull.field($form, '.country', V(R.isNotEmpty));
+}
+
+
+function pullPlanQuantity($form, plan, options, pull) {
+  var qty = pull.field($form, '.plan .quantity', V(R.isValidQuantity));
+  // An empty quantity field indicates 1
+  plan.quantity = qty || 1;
 }
 
 
@@ -1583,7 +1555,7 @@ function verifyTOSChecked($form, pull) {
 }
 
 
-R.buildBillingInfoUpdateForm = R.buildBillingInfoForm = function(options) {
+R.buildBillingInfoUpdateForm = function(options) {
   var defaults = {
     addressRequirement: 'full'
   , distinguishContactFromBillingInfo: true 
@@ -1624,13 +1596,13 @@ R.buildBillingInfoUpdateForm = R.buildBillingInfoForm = function(options) {
       , distinguishContactFromBillingInfo: options.distinguishContactFromBillingInfo
       , accountCode: options.accountCode
       , success: function(response) {
-          if(options.afterUpdate)
-            options.afterUpdate(response);
+          if(options.successHandler) {
+            options.successHandler(R.getToken(response));
+          }
 
           if(options.successURL) {
             var url = options.successURL;
-            // url = R.replaceVars(url, response);
-            R.post(url, response, options);
+            R.postResult(url, response, options);
           }
         }
       , error: function(errors) {
@@ -1709,8 +1681,6 @@ R.buildTransactionForm = function(options) {
     R.raiseError('collectContactInfo is false, but no accountCode provided');
   }
 
-
-  // if(!options.accountCode) R.raiseError('accountCode missing');
   if(!options.signature) R.raiseError('signature missing');
 
 
@@ -1722,8 +1692,6 @@ R.buildTransactionForm = function(options) {
   transaction.account = account;
   transaction.billingInfo = billingInfo;
   transaction.currency = options.currency;
-  transaction.description = options.description;
-  transaction.accountingCode = options.accountingCode;
   transaction.cost = new R.Cost(options.amountInCents);
 
   var $form = $(R.dom.one_time_transaction_form);
@@ -1763,13 +1731,13 @@ R.buildTransactionForm = function(options) {
         signature: options.signature
       , accountCode: options.accountCode
       , success: function(response) {
-          if(options.afterPay)
-            options.afterPay(response);
+          if(options.successHandler) {
+            options.successHandler(R.getToken(response));
+          }
 
           if(options.successURL) {
             var url = options.successURL;
-            // url = R.replaceVars(url, response);
-            R.post(url, response, options);
+            R.postResult(url, response, options);
           }
         }
       , error: function(errors) {
@@ -1818,15 +1786,18 @@ R.buildSubscriptionForm = function(options) {
   $form.find('.billing_info').html(R.dom.billing_info_fields);
 
 
+  if(options.planCode)
+    R.Plan.get(options.planCode, options.currency, gotPlan);
+  else if(options.plan) {
+    // this should never be called
+    // the api does not have it, nor does anywhere else in the program refer to it
+    gotPlan(options.plan);    
+  }
+
   initCommonForm($form, options);
   initContactInfoForm($form, options);
   initBillingInfoForm($form, options);
   initTOSCheck($form, options);
-
-  if(options.planCode)
-    R.Plan.get(options.planCode, gotPlan);
-  else if(options.plan)
-    gotPlan(options.plan);
 
   function gotPlan(plan) {
 
@@ -2083,7 +2054,7 @@ R.buildSubscriptionForm = function(options) {
       $form.find('.invalid').removeClass('invalid');
 
       validationGroup(function(puller) {
-        subscription.plan.quantity = puller.field($form, '.plan .quantity', V(R.isValidQuantity)); 
+        pullPlanQuantity($form, subscription.plan, options, puller);
         pullAccountFields($form, account, options, puller);
         pullBillingInfoFields($form, billingInfo, options, puller);
         verifyTOSChecked($form, puller);
@@ -2096,13 +2067,12 @@ R.buildSubscriptionForm = function(options) {
 
         signature: options.signature
         ,   success: function(response) {
-              if(options.afterSubscribe)
-                options.afterSubscribe(response);
-
+              if(options.successHandler) {
+                options.successHandler(R.getToken(response));
+              }
               if(options.successURL) {
                 var url = options.successURL;
-                // url = R.replaceVars(url, response);
-                R.post(url, response, options);
+                R.postResult(url, response, options);
               }
             }
         , error: function(errors) {
@@ -2244,13 +2214,13 @@ R.dom['contact_info_fields'] = '<div class="title">Contact Info</div><div class=
 // Compiled from src/dom/billing_info_fields.jade
 //////////////////////////////////////////////////
 
-R.dom['billing_info_fields'] = '<div class="title">Billing Info</div><div class="accepted_cards"></div><div class="credit_card"><div class="field first_name"><div class="placeholder">First Name </div><input type="text"/></div><div class="field last_name"><div class="placeholder">Last Name </div><input type="text"/></div><div class="card_cvv"><div class="field card_number"><div class="placeholder">Credit Card Number  </div><input type="text"/></div><div class="field cvv"><div class="placeholder">CVV </div><input type="text"/></div></div><div class="field expires"><div class="title">Expires </div><div class="month"><select><option value="1">01 - January</option><option value="2">02 - February</option><option value="3">03 - March</option><option value="4">04 - April</option><option value="5">05 - May</option><option value="6">06 - June</option><option value="7">07 - July</option><option value="8">08 - August</option><option value="9">09 - September</option><option value="10">10 - October</option><option value="11">11 - November</option><option value="12">12 - December</option></select></div><div class="year"><select></select></div></div></div><div class="address"><div class="field address1"><div class="placeholder">Address</div><input type="text"/></div><div class="field address2"><div class="placeholder">Apt/Suite</div><input type="text"/></div><div class="field city"><div class="placeholder">City</div><input type="text"/></div><div class="state_zip"><div class="field state"><div class="placeholder">State/Province</div><input type="text"/></div><div class="field zip"><div class="placeholder">Zip/Postal</div><input type="text"/></div></div><div class="field country"><select><option value="-">Select Country</option><option value="-">-------------- </option><option value="AF">Afghanistan</option><option value="AL">Albania</option><option value="DZ">Algeria</option><option value="AS">American Samoa</option><option value="AD">Andorra</option><option value="AO">Angola</option><option value="AI">Anguilla</option><option value="AQ">Antarctica</option><option value="AG">Antigua and Barbuda</option><option value="AR">Argentina</option><option value="AM">Armenia</option><option value="AW">Aruba</option><option value="AC">Ascension(Island</option><option value="AU">Australia</option><option value="AT">Austria</option><option value="AZ">Azerbaijan</option><option value="BS">Bahamas</option><option value="BH">Bahrain</option><option value="BD">Bangladesh</option><option value="BB">Barbados</option><option value="BY">Belarus</option><option value="BE">Belgium</option><option value="BZ">Belize</option><option value="BJ">Benin</option><option value="BM">Bermuda</option><option value="BT">Bhutan</option><option value="BO">Bolivia</option><option value="BA">Bosnia and Herzegovina</option><option value="BW">Botswana</option><option value="BV">Bouvet Island</option><option value="BR">Brazil</option><option value="BQ">British Antarctic Territory</option><option value="IO">British Indian Ocean Territory</option><option value="VG">British Virgin Islands</option><option value="BN">Brunei</option><option value="BG">Bulgaria</option><option value="BF">Burkina Faso</option><option value="BI">Burundi</option><option value="KH">Cambodia</option><option value="CM">Cameroon</option><option value="CA">Canada</option><option value="IC">Canary Islands</option><option value="CT">Canton and Enderbury Islands</option><option value="CV">Cape Verde</option><option value="KY">Cayman Islands</option><option value="CF">Central African Republic</option><option value="EA">Ceuta and Melilla</option><option value="TD">Chad</option><option value="CL">Chile</option><option value="CN">China</option><option value="CX">Christmas Island</option><option value="CP">Clipperton Island</option><option value="CC">Cocos [Keeling] Islands</option><option value="CO">Colombia</option><option value="KM">Comoros</option><option value="CD">Congo [DRC]</option><option value="CG">Congo [Republic]</option><option value="CK">Cook Islands</option><option value="CR">Costa Rica</option><option value="HR">Croatia</option><option value="CU">Cuba</option><option value="CY">Cyprus</option><option value="CZ">Czech Republic</option><option value="DK">Denmark</option><option value="DG">Diego Garcia</option><option value="DJ">Djibouti</option><option value="DM">Dominica</option><option value="DO">Dominican Republic</option><option value="NQ">Dronning Maud Land</option><option value="DD">East Germany</option><option value="TL">East Timor</option><option value="EC">Ecuador</option><option value="EG">Egypt</option><option value="SV">El Salvador</option><option value="GQ">Equatorial Guinea</option><option value="ER">Eritrea</option><option value="EE">Estonia</option><option value="ET">Ethiopia</option><option value="EU">European Union</option><option value="FK">Falkland Islands [Islas Malvinas]</option><option value="FO">Faroe Islands</option><option value="FJ">Fiji</option><option value="FI">Finland</option><option value="FR">France</option><option value="GF">French Guiana</option><option value="PF">French Polynesia</option><option value="TF">French Southern Territories</option><option value="FQ">French Southern and Antarctic Territories</option><option value="GA">Gabon</option><option value="GM">Gambia</option><option value="GE">Georgia</option><option value="DE">Germany</option><option value="GH">Ghana</option><option value="GI">Gibraltar</option><option value="GR">Greece</option><option value="GL">Greenland</option><option value="GD">Grenada</option><option value="GP">Guadeloupe</option><option value="GU">Guam</option><option value="GT">Guatemala</option><option value="GG">Guernsey</option><option value="GN">Guinea</option><option value="GW">Guinea-Bissau</option><option value="GY">Guyana</option><option value="HT">Haiti</option><option value="HM">Heard Island and McDonald Islands</option><option value="HN">Honduras</option><option value="HK">Hong Kong</option><option value="HU">Hungary</option><option value="IS">Iceland</option><option value="IN">India</option><option value="ID">Indonesia</option><option value="IR">Iran</option><option value="IQ">Iraq</option><option value="IE">Ireland</option><option value="IM">Isle of Man</option><option value="IL">Israel</option><option value="IT">Italy</option><option value="CI">Ivory Coast</option><option value="JM">Jamaica</option><option value="JP">Japan</option><option value="JE">Jersey</option><option value="JT">Johnston Island</option><option value="JO">Jordan</option><option value="KZ">Kazakhstan</option><option value="KE">Kenya</option><option value="KI">Kiribati</option><option value="KW">Kuwait</option><option value="KG">Kyrgyzstan</option><option value="LA">Laos</option><option value="LV">Latvia</option><option value="LB">Lebanon</option><option value="LS">Lesotho</option><option value="LR">Liberia</option><option value="LY">Libya</option><option value="LI">Liechtenstein</option><option value="LT">Lithuania</option><option value="LU">Luxembourg</option><option value="MO">Macau</option><option value="MK">Macedonia [FYROM]</option><option value="MG">Madagascar</option><option value="MW">Malawi</option><option value="MY">Malaysia</option><option value="MV">Maldives</option><option value="ML">Mali</option><option value="MT">Malta</option><option value="MH">Marshall Islands</option><option value="MQ">Martinique</option><option value="MR">Mauritania</option><option value="MU">Mauritius</option><option value="YT">Mayotte</option><option value="FX">Metropolitan France</option><option value="MX">Mexico</option><option value="FM">Micronesia</option><option value="MI">Midway Islands</option><option value="MD">Moldova</option><option value="MC">Monaco</option><option value="MN">Mongolia</option><option value="ME">Montenegro</option><option value="MS">Montserrat</option><option value="MA">Morocco</option><option value="MZ">Mozambique</option><option value="MM">Myanmar [Burma]</option><option value="NA">Namibia</option><option value="NR">Nauru</option><option value="NP">Nepal</option><option value="NL">Netherlands</option><option value="AN">Netherlands Antilles</option><option value="NT">Neutral Zone</option><option value="NC">New Caledonia</option><option value="NZ">New Zealand</option><option value="NI">Nicaragua</option><option value="NE">Niger</option><option value="NG">Nigeria</option><option value="NU">Niue</option><option value="NF">Norfolk Island</option><option value="KP">North Korea</option><option value="VD">North Vietnam</option><option value="MP">Northern Mariana Islands</option><option value="NO">Norway</option><option value="OM">Oman</option><option value="QO">Outlying Oceania</option><option value="PC">Pacific Islands Trust Territory</option><option value="PK">Pakistan</option><option value="PW">Palau</option><option value="PS">Palestinian Territories</option><option value="PA">Panama</option><option value="PZ">Panama Canal Zone</option><option value="PG">Papua New Guinea</option><option value="PY">Paraguay</option><option value="YD">People\'s Democratic Republic of Yemen</option><option value="PE">Peru</option><option value="PH">Philippines</option><option value="PN">Pitcairn Islands</option><option value="PL">Poland</option><option value="PT">Portugal</option><option value="PR">Puerto Rico</option><option value="QA">Qatar</option><option value="RO">Romania</option><option value="RU">Russia</option><option value="RW">Rwanda</option><option value="RE">R\u00e9union</option><option value="BL">Saint Barth\u00e9lemy</option><option value="SH">Saint Helena</option><option value="KN">Saint Kitts and Nevis</option><option value="LC">Saint Lucia</option><option value="MF">Saint Martin</option><option value="PM">Saint Pierre and Miquelon</option><option value="VC">Saint Vincent and the Grenadines</option><option value="WS">Samoa</option><option value="SM">San Marino</option><option value="SA">Saudi Arabia</option><option value="SN">Senegal</option><option value="RS">Serbia</option><option value="CS">Serbia and Montenegro</option><option value="SC">Seychelles</option><option value="SL">Sierra Leone</option><option value="SG">Singapore</option><option value="SK">Slovakia</option><option value="SI">Slovenia</option><option value="SB">Solomon Islands</option><option value="SO">Somalia</option><option value="ZA">South Africa</option><option value="GS">South Georgia and the South Sandwich Islands</option><option value="KR">South Korea</option><option value="ES">Spain</option><option value="LK">Sri Lanka</option><option value="SD">Sudan</option><option value="SR">Suriname</option><option value="SJ">Svalbard and Jan Mayen</option><option value="SZ">Swaziland</option><option value="SE">Sweden</option><option value="CH">Switzerland</option><option value="SY">Syria</option><option value="ST">S\u00e3o Tom\u00e9 and Pr\u00edncipe</option><option value="TW">Taiwan</option><option value="TJ">Tajikistan</option><option value="TZ">Tanzania</option><option value="TH">Thailand</option><option value="TG">Togo</option><option value="TK">Tokelau</option><option value="TO">Tonga</option><option value="TT">Trinidad and Tobago</option><option value="TA">Tristan da Cunha</option><option value="TN">Tunisia</option><option value="TR">Turkey</option><option value="TM">Turkmenistan</option><option value="TC">Turks and Caicos Islands</option><option value="TV">Tuvalu</option><option value="UM">U.S. Minor Outlying Islands</option><option value="PU">U.S. Miscellaneous Pacific Islands</option><option value="VI">U.S. Virgin Islands</option><option value="UG">Uganda</option><option value="UA">Ukraine</option><option value="SU">Union(of Soviet Socialist Republics</option><option value="AE">United Arab Emirates</option><option value="GB">United Kingdom</option><option value="US">United States</option><option value="UY">Uruguay</option><option value="UZ">Uzbekistan</option><option value="VU">Vanuatu</option><option value="VA">Vatican City</option><option value="VE">Venezuela</option><option value="VN">Vietnam</option><option value="WK">Wake Island</option><option value="WF">Wallis and Futuna</option><option value="EH">Western Sahara</option><option value="YE">Yemen</option><option value="ZM">Zambia</option><option value="ZW">Zimbabwe</option><option value="AX">\u00c5land Islands</option></select></div></div><div class="field vat_number"><div class="placeholder">VAT Number</div><input type="text"/></div>';
+R.dom['billing_info_fields'] = '<div class="title">Billing Info</div><div class="accepted_cards"></div><div class="credit_card"><div class="field first_name"><div class="placeholder">First Name </div><input type="text"/></div><div class="field last_name"><div class="placeholder">Last Name </div><input type="text"/></div><div class="card_cvv"><div class="field card_number"><div class="placeholder">Credit Card Number  </div><input type="text"/></div><div class="field cvv"><div class="placeholder">CVV </div><input type="text"/></div></div><div class="field expires"><div class="title">Expires </div><div class="month"><select><option value="1">01 - January</option><option value="2">02 - February</option><option value="3">03 - March</option><option value="4">04 - April</option><option value="5">05 - May</option><option value="6">06 - June</option><option value="7">07 - July</option><option value="8">08 - August</option><option value="9">09 - September</option><option value="10">10 - October</option><option value="11">11 - November</option><option value="12">12 - December</option></select></div><div class="year"><select></select></div></div></div><div class="address"><div class="field address1"><div class="placeholder">Address</div><input type="text"/></div><div class="field address2"><div class="placeholder">Apt/Suite</div><input type="text"/></div><div class="field city"><div class="placeholder">City</div><input type="text"/></div><div class="state_zip"><div class="field state"><div class="placeholder">State/Province</div><input type="text"/></div><div class="field zip"><div class="placeholder">Zip/Postal</div><input type="text"/></div></div><div class="field country"><select><option value="-">Select Country</option><option value="-">--------------</option><option value="AF">Afghanistan</option><option value="AL">Albania</option><option value="DZ">Algeria</option><option value="AS">American Samoa</option><option value="AD">Andorra</option><option value="AO">Angola</option><option value="AI">Anguilla</option><option value="AQ">Antarctica</option><option value="AG">Antigua and Barbuda</option><option value="AR">Argentina</option><option value="AM">Armenia</option><option value="AW">Aruba</option><option value="AC">Ascension Island</option><option value="AU">Australia</option><option value="AT">Austria</option><option value="AZ">Azerbaijan</option><option value="BS">Bahamas</option><option value="BH">Bahrain</option><option value="BD">Bangladesh</option><option value="BB">Barbados</option><option value="BE">Belgium</option><option value="BZ">Belize</option><option value="BJ">Benin</option><option value="BM">Bermuda</option><option value="BT">Bhutan</option><option value="BO">Bolivia</option><option value="BA">Bosnia and Herzegovina</option><option value="BW">Botswana</option><option value="BV">Bouvet Island</option><option value="BR">Brazil</option><option value="BQ">British Antarctic Territory</option><option value="IO">British Indian Ocean Territory</option><option value="VG">British Virgin Islands</option><option value="BN">Brunei</option><option value="BG">Bulgaria</option><option value="BF">Burkina Faso</option><option value="BI">Burundi</option><option value="KH">Cambodia</option><option value="CM">Cameroon</option><option value="CA">Canada</option><option value="IC">Canary Islands</option><option value="CT">Canton and Enderbury Islands</option><option value="CV">Cape Verde</option><option value="KY">Cayman Islands</option><option value="CF">Central African Republic</option><option value="EA">Ceuta and Melilla</option><option value="TD">Chad</option><option value="CL">Chile</option><option value="CN">China</option><option value="CX">Christmas Island</option><option value="CP">Clipperton Island</option><option value="CC">Cocos [Keeling] Islands</option><option value="CO">Colombia</option><option value="KM">Comoros</option><option value="CD">Congo [DRC]</option><option value="CK">Cook Islands</option><option value="CR">Costa Rica</option><option value="HR">Croatia</option><option value="CU">Cuba</option><option value="CY">Cyprus</option><option value="CZ">Czech Republic</option><option value="DK">Denmark</option><option value="DG">Diego Garcia</option><option value="DJ">Djibouti</option><option value="DM">Dominica</option><option value="DO">Dominican Republic</option><option value="NQ">Dronning Maud Land</option><option value="DD">East Germany</option><option value="TL">East Timor</option><option value="EC">Ecuador</option><option value="EG">Egypt</option><option value="SV">El Salvador</option><option value="EE">Estonia</option><option value="ET">Ethiopia</option><option value="EU">European Union</option><option value="FK">Falkland Islands [Islas Malvinas]</option><option value="FO">Faroe Islands</option><option value="FJ">Fiji</option><option value="FI">Finland</option><option value="FR">France</option><option value="GF">French Guiana</option><option value="PF">French Polynesia</option><option value="TF">French Southern Territories</option><option value="FQ">French Southern and Antarctic Territories</option><option value="GA">Gabon</option><option value="GM">Gambia</option><option value="GE">Georgia</option><option value="DE">Germany</option><option value="GH">Ghana</option><option value="GI">Gibraltar</option><option value="GR">Greece</option><option value="GL">Greenland</option><option value="GD">Grenada</option><option value="GP">Guadeloupe</option><option value="GU">Guam</option><option value="GT">Guatemala</option><option value="GG">Guernsey</option><option value="GW">Guinea-Bissau</option><option value="GY">Guyana</option><option value="HT">Haiti</option><option value="HM">Heard Island and McDonald Islands</option><option value="HN">Honduras</option><option value="HK">Hong Kong</option><option value="HU">Hungary</option><option value="IS">Iceland</option><option value="IN">India</option><option value="ID">Indonesia</option><option value="IE">Ireland</option><option value="IM">Isle of Man</option><option value="IL">Israel</option><option value="IT">Italy</option><option value="JM">Jamaica</option><option value="JP">Japan</option><option value="JE">Jersey</option><option value="JT">Johnston Island</option><option value="JO">Jordan</option><option value="KZ">Kazakhstan</option><option value="KE">Kenya</option><option value="KI">Kiribati</option><option value="KW">Kuwait</option><option value="KG">Kyrgyzstan</option><option value="LA">Laos</option><option value="LV">Latvia</option><option value="LS">Lesotho</option><option value="LY">Libya</option><option value="LI">Liechtenstein</option><option value="LT">Lithuania</option><option value="LU">Luxembourg</option><option value="MO">Macau</option><option value="MK">Macedonia [FYROM]</option><option value="MG">Madagascar</option><option value="MW">Malawi</option><option value="MY">Malaysia</option><option value="MV">Maldives</option><option value="ML">Mali</option><option value="MT">Malta</option><option value="MH">Marshall Islands</option><option value="MQ">Martinique</option><option value="MR">Mauritania</option><option value="MU">Mauritius</option><option value="YT">Mayotte</option><option value="FX">Metropolitan France</option><option value="MX">Mexico</option><option value="FM">Micronesia</option><option value="MI">Midway Islands</option><option value="MD">Moldova</option><option value="MC">Monaco</option><option value="MN">Mongolia</option><option value="ME">Montenegro</option><option value="MS">Montserrat</option><option value="MA">Morocco</option><option value="MZ">Mozambique</option><option value="NA">Namibia</option><option value="NR">Nauru</option><option value="NP">Nepal</option><option value="NL">Netherlands</option><option value="AN">Netherlands Antilles</option><option value="NT">Neutral Zone</option><option value="NC">New Caledonia</option><option value="NZ">New Zealand</option><option value="NI">Nicaragua</option><option value="NE">Niger</option><option value="NG">Nigeria</option><option value="NU">Niue</option><option value="NF">Norfolk Island</option><option value="VD">North Vietnam</option><option value="MP">Northern Mariana Islands</option><option value="NO">Norway</option><option value="OM">Oman</option><option value="QO">Outlying Oceania</option><option value="PC">Pacific Islands Trust Territory</option><option value="PK">Pakistan</option><option value="PW">Palau</option><option value="PS">Palestinian Territories</option><option value="PA">Panama</option><option value="PZ">Panama Canal Zone</option><option value="PY">Paraguay</option><option value="YD">People\'s Democratic Republic of Yemen</option><option value="PE">Peru</option><option value="PH">Philippines</option><option value="PN">Pitcairn Islands</option><option value="PL">Poland</option><option value="PT">Portugal</option><option value="PR">Puerto Rico</option><option value="QA">Qatar</option><option value="RO">Romania</option><option value="RU">Russia</option><option value="RW">Rwanda</option><option value="RE">R\u00e9union</option><option value="BL">Saint Barth\u00e9lemy</option><option value="SH">Saint Helena</option><option value="KN">Saint Kitts and Nevis</option><option value="LC">Saint Lucia</option><option value="MF">Saint Martin</option><option value="PM">Saint Pierre and Miquelon</option><option value="VC">Saint Vincent and the Grenadines</option><option value="WS">Samoa</option><option value="SM">San Marino</option><option value="SA">Saudi Arabia</option><option value="SN">Senegal</option><option value="RS">Serbia</option><option value="CS">Serbia and Montenegro</option><option value="SC">Seychelles</option><option value="SL">Sierra Leone</option><option value="SG">Singapore</option><option value="SK">Slovakia</option><option value="SI">Slovenia</option><option value="SB">Solomon Islands</option><option value="ZA">South Africa</option><option value="GS">South Georgia and the South Sandwich Islands</option><option value="KR">South Korea</option><option value="ES">Spain</option><option value="LK">Sri Lanka</option><option value="SR">Suriname</option><option value="SJ">Svalbard and Jan Mayen</option><option value="SZ">Swaziland</option><option value="SE">Sweden</option><option value="CH">Switzerland</option><option value="ST">S\u00e3o Tom\u00e9 and Pr\u00edncipe</option><option value="TW">Taiwan</option><option value="TJ">Tajikistan</option><option value="TZ">Tanzania</option><option value="TH">Thailand</option><option value="TG">Togo</option><option value="TK">Tokelau</option><option value="TO">Tonga</option><option value="TT">Trinidad and Tobago</option><option value="TA">Tristan da Cunha</option><option value="TN">Tunisia</option><option value="TR">Turkey</option><option value="TM">Turkmenistan</option><option value="TC">Turks and Caicos Islands</option><option value="TV">Tuvalu</option><option value="UM">U.S. Minor Outlying Islands</option><option value="PU">U.S. Miscellaneous Pacific Islands</option><option value="VI">U.S. Virgin Islands</option><option value="UG">Uganda</option><option value="UA">Ukraine</option><option value="AE">United Arab Emirates</option><option value="GB">United Kingdom</option><option value="US">United States</option><option value="UY">Uruguay</option><option value="UZ">Uzbekistan</option><option value="VU">Vanuatu</option><option value="VA">Vatican City</option><option value="VE">Venezuela</option><option value="VN">Vietnam</option><option value="WK">Wake Island</option><option value="WF">Wallis and Futuna</option><option value="EH">Western Sahara</option><option value="YE">Yemen</option><option value="ZM">Zambia</option><option value="AX">\u00c5land Islands</option></select></div></div><div class="field vat_number"><div class="placeholder">VAT Number</div><input type="text"/></div>';
 
 //////////////////////////////////////////////////
 // Compiled from src/dom/subscribe_form.jade
 //////////////////////////////////////////////////
 
-R.dom['subscribe_form'] = '<form class="recurly subscribe"><div class="subscription"><div class="plan"><div class="name"></div><div class="field quantity"><div class="placeholder">Qty</div><input type="text"/></div><div class="recurring_cost"><div class="cost"></div><div class="interval"></div></div><div class="free_trial"></div><div class="setup_fee"><div class="title">Setup Fee</div><div class="cost"></div></div></div><div class="add_ons none"></div><div class="coupon"><div class="coupon_code field"><div class="placeholder">Coupon Code</div><input type="text" class="coupon_code"/></div><div class="check"></div><div class="description"></div><div class="discount"></div></div><div class="vat"><div class="title">VAT</div><div class="cost"></div></div></div><div class="due_now"><div class="title">Order Total</div><div class="cost"></div></div><div class="server_errors none"></div><div class="contact_info"></div><div class="billing_info"></div><div class="accept_tos"></div><div class="footer"><button type="submit" class="submit">Subscribe</button></div></form>';
+R.dom['subscribe_form'] = '<form class="recurly subscribe"><!--[if lt IE 7]><div class="iefail"><div class="chromeframe"><p class="blast">Your browser is not supported by Recurly.js.</p><p><a href="http://browsehappy.com/">Upgrade to a different browser</a></p><p>or</p><p><a href="http://www.google.com/chromeframe/?redirect=true">install Google Chrome Frame</a></p><p>to use this site.</p></div></div><![endif]--><div class="subscription"><div class="plan"><div class="name"></div><div class="field quantity"><div class="placeholder">Qty</div><input type="text"/></div><div class="recurring_cost"><div class="cost"></div><div class="interval"></div></div><div class="free_trial"></div><div class="setup_fee"><div class="title">Setup Fee</div><div class="cost"></div></div></div><div class="add_ons none"></div><div class="coupon"><div class="coupon_code field"><div class="placeholder">Coupon Code</div><input type="text" class="coupon_code"/></div><div class="check"></div><div class="description"></div><div class="discount"></div></div><div class="vat"><div class="title">VAT</div><div class="cost"></div></div></div><div class="due_now"><div class="title">Order Total</div><div class="cost"></div></div><div class="server_errors none"></div><div class="contact_info"></div><div class="billing_info"></div><div class="accept_tos"></div><div class="footer"><button type="submit" class="submit">Subscribe</button></div></form>';
 
 //////////////////////////////////////////////////
 // Compiled from src/dom/update_billing_info_form.jade

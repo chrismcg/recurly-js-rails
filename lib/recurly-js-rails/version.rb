@@ -1,6 +1,6 @@
 module RecurlyJs
   module Rails
-    VERSION = "0.0.1"
-    RECURLY_JS_VERSION="2a76407c72a55324234880222586641a9cf430c4"
+    VERSION = "0.0.2"
+    RECURLY_JS_VERSION="9c37716d43e0a86561e23cf06a89a542e101fabd"
   end
 end
