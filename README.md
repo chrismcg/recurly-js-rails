@@ -20,7 +20,7 @@ Or install it yourself as:
 
 To include the js and css everywhere add:
 
-`//= recurly` to both your application.js and application.css
+`//= require recurly` to both your application.js and application.css
 
 To just include on your subscription pages, add:
 
